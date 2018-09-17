@@ -1,0 +1,82 @@
+---
+title: "Exploratory Data Analysis - Incidents of Cancer"
+author: "Jonathan D'Souza"
+date: "9/15/2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(car)
+```
+
+## Introduction
+Given a Data Set for cancer incidences for a select group of counties.... this study attempts to explore the relationships between the outcome variable : Annual Incident Count and other key independent variables.
+
+------
+
+
+```{r LoadData}
+cancer<-read.csv("cancer.csv")  #Assumes file in current working directory
+names(cancer)
+nrow(cancer)
+```
+Annual Incident Count is  better expressed as percent of population
+
+```{r CleanData}
+summary(cancer$avgAnnCount)
+cancer$AnnCountPercent<-with(cancer,100*avgAnnCount/popEst2015)
+
+```
+
+
+
+
+
+## Univariate Analysis of Key Variables
+It is clear that the annual count percent has some outliers given that max % >100 (can't be more incidents than the population)
+Plotting the Avg annual count shows a big spike in values
+```{r univariate}
+summary (cancer$AnnCountPercent)
+
+hist(cancer$avgAnnCount,100000)
+
+#Try with smaller range
+hist(cancer$avgAnnCount,100000,xlim=c(1900,2010))
+#Get these outlier values
+
+cleandata<-subset(cancer,avgAnnCount>1970 & avgAnnCount>1960)
+hist(cleandata$avgAnnCount,100000)
+
+```
+
+
+## Analysis of Key Relationships
+Explore how your outcome variable is related to the other variables in your dataset. Make sure to use visualizations to understand the nature of each bivariate relationship.
+What transformations can you apply to clarify the relationships you see in the data? Be sure to justify each transformation you use.
+
+```{r relationships, echo=FALSE}
+# Seems to be a correlation between death rate and incidents and a negative correlation between birth rate and incidents
+scatterplotMatrix(~AnnCountPercent+popEst2015+BirthRate+deathRate,data=cleandata)
+
+#Seems to be positive correlation between percentage of private coverage and incidents AS well as % of public coverage and incidents...? 
+scatterplotMatrix(~AnnCountPercent+PctPrivateCoverage+PctEmpPrivCoverage+PctPublicCoverage,data=cleandata)
+
+scatterplotMatrix(~AnnCountPercent+PctEmployed16_Over+PctUnemployed16_Over,data=cleandata)
+```
+
+
+
+
+## Analysis of Secondary Effects (10 pts)
+What secondary variables might have confounding effects on the relationships you have identified? Ex- plain how these variables affect your understanding of the data.
+
+
+##Conclusion (20 pts)
+
+Summarize your exploratory analysis. What can you conclude based on your analysis? 2
+
+
+
