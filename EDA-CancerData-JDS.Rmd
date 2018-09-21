@@ -1,7 +1,7 @@
 ---
 title: "Exploratory Data Analysis - Incidents of Cancer"
-author: "Jonathan D'Souza"
-date: "9/15/2018"
+authors: "Lina Gurevich,Duda Espindola, Jonathan D'Souza "
+date: "9/26/2018"
 output:
   pdf_document: default
   html_document: default
@@ -19,27 +19,54 @@ Given a Data Set for cancer incidences for a select group of counties.... this s
 
 
 ```{r LoadData}
-cancer<-read.csv("cancer.csv")  #Assumes file in current working directory
-names(cancer)
-nrow(cancer)
+raw_data<-read.csv("cancer.csv")  #Assumes file in current working directory
+cancer<-raw_data #Keep one copy of raw data as is
+str(cancer)
 ```
-Annual Incident Count is  better expressed as percent of population
+There are 31 variables across 3047 observations in this data set
 
-```{r CleanData}
-summary(cancer$avgAnnCount)
+```{r Univariate Analysis}
+summary(cancer)
+Emp.UnEmp<-cancer$PctEmployed16_Over+cancer$PctUnemployed16_Over
+summary(Emp.UnEmp)
+hist(Emp.UnEmp,breaks="fd",main="Distribution of Employment data per county",xlab="Percent of 16_over employed and unemployed")
+```
+There are 2 variables with null values: PctSomeCol18_24 and PctEmployed16_Over
+The sum of the variables percentage employed and unemployed over 16 has a surprisingly broad distribution around the mean of 62.01, when one would expect it to be close to (if not) 100%. 
+We will keep those aside and look at other variables
+
+```{r AnalyzeOutcomeVariables}
+
+#Annual Indident Rate is better expressed as a percentage of county population
 cancer$AnnCountPercent<-with(cancer,100*avgAnnCount/popEst2015)
+summary(cancer$AnnCountPercent)
+#Look for where the outlier might be coming from
 
+hist(cancer$avgAnnCount,breaks="fd",main="Average Annual Count Distrubution",xlab="Average Annual Count",xlim=c(0,10000))
+outliers<-cancer[cancer$AnnCountPercent>50,] #Assuming anything over 50% incident rate has to be an error
+summary(outliers$avgAnnCount)
+#Clearly all of these have the exact same erroneous value for Average Annual Count.
+error_value<-outliers[1,"avgAnnCount"]
+cancer$avgAnnCount[cancer$avgAnnCount==error_value]<-NA
+summary(cancer$avgAnnCount)
+cancer$AnnCountPercent<-with(cancer,100*avgAnnCount/popEst2015) #Recalculate percentages
+summary(cancer$AnnCountPercent)
+
+summary(cancer$deathRate)
+hist(cancer$deathRate,breaks="fd",main="Death Rate Distrubution",xlab="Death Rate")
+
+
+scatterplot(AnnCountPercent~deathRate,data=cancer)
 ```
 
 
 
 
 
-## Univariate Analysis of Key Variables
+## Prep final data set for analysis
 It is clear that the annual count percent has some outliers given that max % >100 (can't be more incidents than the population)
 Plotting the Avg annual count shows a big spike in values
-```{r univariate}
-summary (cancer$AnnCountPercent)
+
 
 hist(cancer$avgAnnCount,100000)
 
@@ -59,12 +86,12 @@ What transformations can you apply to clarify the relationships you see in the d
 
 ```{r relationships, echo=FALSE}
 # Seems to be a correlation between death rate and incidents and a negative correlation between birth rate and incidents
-scatterplotMatrix(~AnnCountPercent+popEst2015+BirthRate+deathRate,data=cleandata)
+#scatterplotMatrix(~AnnCountPercent+popEst2015+BirthRate+deathRate,data=cleandata)
 
 #Seems to be positive correlation between percentage of private coverage and incidents AS well as % of public coverage and incidents...? 
-scatterplotMatrix(~AnnCountPercent+PctPrivateCoverage+PctEmpPrivCoverage+PctPublicCoverage,data=cleandata)
+#scatterplotMatrix(~AnnCountPercent+PctPrivateCoverage+PctEmpPrivCoverage+PctPublicCoverage,data=cleandata)
 
-scatterplotMatrix(~AnnCountPercent+PctEmployed16_Over+PctUnemployed16_Over,data=cleandata)
+#scatterplotMatrix(~AnnCountPercent+PctEmployed16_Over+PctUnemployed16_Over,data=cleandata)
 ```
 
 
