@@ -97,4 +97,9 @@ cancer.df[cancer.df$deathRate > 300,]
 summary(cancer.df$avgAnnCount)
 # The maximum value catchwa our attention, mainly because it is in much higher
 # order of magnitude. Let's check the histogram for more enlightment:
-hist(cancer.df$avgAnnCount, breaks=100, , labels=TRUE)
+hist(cancer.df$avgAnnCount, xlab = "Mean Number of Incidences per County (2009-2013)", ylab="Frequency", main = "Histogram of Mean Cancer Incidences")
+#
+# By just analuzing the histogram, we see that its distribution is extremely right 
+# skewed. Let's check its density plot:
+densityPlot(cancer.df$avgAnnCount)
+# That extremily right-skewed
