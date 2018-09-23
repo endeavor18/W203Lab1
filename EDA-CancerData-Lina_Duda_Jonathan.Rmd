@@ -9,15 +9,19 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,warning=FALSE)
 library(car)
 ```
+#Exploratory Data Analysis - Cancer Mortality Rates
+### **W203 Lab Project (Fall 2018)**
+### *Authors: Lina Gurevich, Duda Espindola, Jonathan D'Souza*
+***
 
 # Executive Summary
 Given a Data Set for cancer incidences for a select group of counties.... this study attempts to explore the relationships between the outcome variable : Death Rate and other key independent variables.
 
+***
 
-------
 
 #Detailed Steps and Findings
 
@@ -26,14 +30,14 @@ Given a Data Set for cancer incidences for a select group of counties.... this s
 ##### Set Up
 ```{r LoadData}
 raw_data<-read.csv("cancer.csv")  #Assumes file in current working directory
-cancer<-raw_data #Keep one copy of raw data as is
+cancer.df<-raw_data #Keep one copy of raw data as is
 ```
 
 ##### Summarize Data Set
 
 ```{r ShowData}
-str(cancer)
-summary(cancer)
+str(cancer.df)
+summary(cancer.df)
 ```
 
 #####Validation of Independent Variables
@@ -43,20 +47,20 @@ There are 2 variables with null values: PctSomeCol18_24 and PctEmployed16_Over.
 
 From the summary of the Median Age it is clear that there are some outliers above 100 years given the max of 624 compared to median & mean in the 40s. We set these outliers to NA values.
 
-```{r DataValidation_2}
+```{r DataValidation_1}
 #Check medianAge based on summary
 
-ageoutliers<-cancer[cancer$MedianAge>100,]  
+ageoutliers<-cancer.df[cancer.df$MedianAge>100,]  
 summary(ageoutliers$MedianAge) # 
-cancer$MedianAge[cancer$MedianAge>300]<-NA  # Set outlier values to NA
+cancer.df$MedianAge[cancer.df$MedianAge>300]<-NA  # Set outlier values to NA
 ```
 
 
 The sum of the variables percentage employed and unemployed over 16 has a surprisingly broad distribution around the mean of 62.01, when one would expect it to be close to (if not) 100%. 
 
 
-```{r DataValidation_1}
-Emp.UnEmp<-cancer$PctEmployed16_Over+cancer$PctUnemployed16_Over
+```{r DataValidation_2}
+Emp.UnEmp<-cancer.df$PctEmployed16_Over+cancer.df$PctUnemployed16_Over
 summary(Emp.UnEmp)
 hist(Emp.UnEmp,breaks="fd",main="Distribution of Employment data per county",xlab="Percent of 16_over employed and unemployed")
 ```
@@ -65,39 +69,42 @@ We note this for now as we analyze other variables.
 
 ##### Validation of potential Outcome Variables.
 
-There are 2 variables we considered as potential outcome variables: Death Rate (assumed to be number of death per 100,000 population) and Average Annual Count (assumed to be annual Cancer Indidence Rate)
+There are 2 variables we considered as potential outcome variables: Death Rate (assumed to be number of death per 100,000 population) and Average Annual Count (assumed to be annual cancer.df Indidence Rate)
 
 ```{r DataValidation_3}
-
 #Annual Indident Rate is better expressed as a percentage of county population
-cancer$AnnCountPercent<-with(cancer,100*avgAnnCount/popEst2015)
-summary(cancer$AnnCountPercent)
+
+cancer.df$AnnCountPercent<-100*cancer.df$avgAnnCount/cancer.df$popEst2015
+summary(cancer.df$AnnCountPercent)
 #Look for where the outlier might be coming from
 
-hist(cancer$avgAnnCount,breaks="fd",main="Average Annual Count Distrubution",xlab="Average Annual Count",xlim=c(0,10000))
-outliers<-cancer[cancer$AnnCountPercent>50,] #Assuming anything over 50% incident rate has to be an error
+hist(cancer.df$avgAnnCount,breaks="fd",main="Average Annual Count Distrubution",xlab="Average Annual Count",xlim=c(0,10000))
+outliers<-cancer.df[cancer.df$AnnCountPercent>50,] #Assuming anything over 50% incident rate has to be an error
 summary(outliers$avgAnnCount)
+
 #Clearly all of these have the exact same erroneous value for Average Annual Count.
 error_value<-outliers[1,"avgAnnCount"]
-cancer$avgAnnCount[cancer$avgAnnCount==error_value]<-NA
-summary(cancer$avgAnnCount)
-cancer$AnnCountPercent<-with(cancer,100*avgAnnCount/popEst2015) #Recalculate percentages
-summary(cancer$AnnCountPercent)
 
-summary(cancer$deathRate)
-hist(cancer$deathRate,breaks="fd",main="Death Rate Distrubution",xlab="Death Rate")
+#Assuming any observation with this value is an error, set them to NA
+cancer.df$avgAnnCount[cancer.df$avgAnnCount==error_value]<-NA
 
+summary(cancer.df$avgAnnCount)
+cancer.df$AnnCountPercent<-with(cancer.df,100*avgAnnCount/popEst2015) #Recalculate percentages
+summary(cancer.df$AnnCountPercent)
 
-scatterplot(AnnCountPercent~deathRate,data=cancer)
+summary(cancer.df$deathRate)
+
 
 ```
 
 
 
+***  
 
 
-## Analysis of Key Variables
-We have chosen to focus on the following variables in this study
+## Analysis of Key Variables  
+
+We have chosen to focus on the following variables in this study  
 
 
 :Key Variables
@@ -106,6 +113,7 @@ We have chosen to focus on the following variables in this study
 |:------------------|:-----------------------------------------------------------------------|
 |DeathRate          | Our output variable                                                    |
 |avgAnnCount        | 2009-2013 mean incidences per county                                   |
+|AnnCountPercent    | 2009-2013 Incident Rate expressed as a percent of population
 |popEst2015         | Estimated population by county 2015                                    |
 |PctPrivateCoverage | Percentage of the population with private insurance coverage           |
 |PctPublicCoverage  | Percentage of the population with public insurance coverage            |
@@ -115,31 +123,159 @@ We have chosen to focus on the following variables in this study
 |medIncome          | Median Income                                                          |
 
 
+```{r UnivariateAnalysis_1}
 
+cancer.df[cancer.df$deathRate > 300,]
+
+hist(cancer.df$deathRate,breaks="fd",main="Death Rate Distrubution",xlab="Death Rate")
+
+
+scatterplot(AnnCountPercent~deathRate,ylab="Annual Incident Rate (%)", xlab="Annual Death Rate (per 100000)",main="Incident Rate vs. Death Rate",data=cancer.df)
+```
+
+We see we still have a single outlier with Incident Rate AND Death Rate being much higher than all other counties.
+
+
+#### PctPrivateCoverage
+
+```{r PctPrivateCoverage}
+summary(cancer.df$PctPrivateCoverage)
+with(cancer.df, hist(PctPrivateCoverage, breaks="FD", col = "gray", main="Histogram of Private Insurance Coverage"))
+box()
+```
+
+
+####PctEmpPrivCoverage
+```{r PctEmpPrivateCoverage}
+summary(cancer.df$PctEmpPrivCoverage  )
+with(cancer.df, hist(PctEmpPrivCoverage  , breaks="FD", col = "gray", main="Histogram of Private (Employer) Insurance Coverage"))
+box()
+```
+
+####PctPublicCoverage
+```{r PctPublicCoverage}
+summary(cancer.df$PctPublicCoverage)
+with(cancer.df, hist(PctPublicCoverage, breaks="FD", col = "gray", main="Histogram of Public Insurance Coverage"))
+box()
+```
+
+####povertyPercent
+```{r povertyPercent}
+summary(cancer.df$povertyPercent)
+with(cancer.df, hist(povertyPercent, breaks="FD", col = "green", main="Histogram of Poverty Percent"))
+box()
+```
+
+####popEst2015
+```{r popEst2015}
+summary(cancer.df$popEst2015)
+with(cancer.df, hist(log(popEst2015), breaks="FD", col = "green", main="Histogram of County Populations"))
+```
+
+***
 ## Analysis of Key Relationships
-Explore how your outcome variable is related to the other variables in your dataset. Make sure to use visualizations to understand the nature of each bivariate relationship.
-What transformations can you apply to clarify the relationships you see in the data? Be sure to justify each transformation you use.
 
-```{r relationships, echo=FALSE}
-# Seems to be a correlation between death rate and incidents and a negative correlation between birth rate and incidents
-#scatterplotMatrix(~AnnCountPercent+popEst2015+BirthRate+deathRate,data=cleandata)
+#### Death Rate vs. Kind of Coverage
 
-#Seems to be positive correlation between percentage of private coverage and incidents AS well as % of public coverage and incidents...? 
-#scatterplotMatrix(~AnnCountPercent+PctPrivateCoverage+PctEmpPrivCoverage+PctPublicCoverage,data=cleandata)
+```{r relationships_1, echo=FALSE}
 
-#scatterplotMatrix(~AnnCountPercent+PctEmployed16_Over+PctUnemployed16_Over,data=cleandata)
+
+cor(cancer.df$deathRate, cancer.df$PctPrivateCoverage)
+scatterplot(deathRate ~ PctPrivateCoverage, span=0.7, lwd=3, id.n=0, data=cancer.df)
+
+```
+There clearly is a negative correlation between Mortality Rate and the percent of the population that has private coverage. This is comparable when looking at percent of population with employer sponsored private coverage as seen in the next plot.
+
+```{r relationships_2, echo=FALSE}
+cor(cancer.df$deathRate, cancer.df$PctEmpPrivCoverage )
+scatterplot(deathRate ~ PctEmpPrivCoverage , span=0.7, lwd=3, id.n=0, data=cancer.df)
+```
+
+
+This intuitively suggests that percent of public coverage should have a positive correlation with Mortality Rate.  
+
+```{r relationships_3, echo=FALSE}
+
+
+cor(cancer.df$deathRate, cancer.df$PctPublicCoverage)
+scatterplot(deathRate ~ PctPublicCoverage, span=0.7, lwd=3, id.n=0, data=cancer.df)
+
+```
+
+
+```{r relationships_6, echo=FALSE}
+cor(cancer.df$deathRate, log(cancer.df$PctPrivateCoverage / cancer.df$PctPublicCoverage))
+scatterplot(deathRate ~ log(PctPrivateCoverage / PctPublicCoverage), span=0.7, lwd=3, id.n=0, data=cancer.df)
+```
+
+An alternate way of looking at this is by grouping into "levels of coverage".. This clearly shows the strong correlation between higher percent of public coverage and mortality rate.
+
+```{r relationships_9, echo=FALSE}
+levels(cut(cancer.df$PctPrivateCoverage, 3, include.lowest=TRUE))
+#levels(cut(cancer.df$PctPrivateCoverage, quantile(cancer.df$PctPrivateCoverage, c(0, 1/3, 2/3, 1)), include.lowest=TRUE))
+#boxplot(deathRate ~ cut(PctPrivateCoverage, 3), data = cancer.df,
+boxplot(deathRate ~ cut(PctPrivateCoverage, 3, include.lowest=TRUE, labels=c("low", "medium", "high")), 
+        data = cancer.df,
+        cex.axis = .7,
+        main = "Death Rate for different levels of private insurance coverage",
+        xlab = "private insurance coverage", ylab = "death rate")
 ```
 
 
 
+```{r relationships_10, echo=FALSE}
+levels(cut(cancer.df$PctPublicCoverage, 3, include.lowest=TRUE))
+boxplot(deathRate ~ cut(PctPublicCoverage, 3, include.lowest=TRUE, labels=c("low", "medium", "high")), 
+        data = cancer.df,
+        cex.axis = .7,
+        main = "Death Rate for different levels of public insurance coverage",
+        xlab = "public insurance coverage", ylab = "death rate")
+```
 
-## Analysis of Secondary Effects (10 pts)
-What secondary variables might have confounding effects on the relationships you have identified? Ex- plain how these variables affect your understanding of the data.
+#### Death Rate vs. Percent under Poverty line
+
+There is clearly a strong correlation between prevalence of poverty and mortality rte.
+```{r relationships_7, echo=FALSE}
+cor(cancer.df$deathRate, cancer.df$povertyPercent)
+scatterplot(deathRate ~ povertyPercent, span=0.7, lwd=3, id.n=0, data=cancer.df)
+```
+
+In comparing prevalance of poverty to public coverage rates though, one can see a strong corelation as one woudl expect
+```{r relationships_8, echo=FALSE}
+cor(cancer.df$PctPublicCoverage, cancer.df$povertyPercent)
+scatterplot(PctPublicCoverage ~ povertyPercent, span=0.7, lwd=3, id.n=0, data=cancer.df)
+```
 
 
-##Conclusion (20 pts)
 
-Summarize your exploratory analysis. What can you conclude based on your analysis? 2
+```{r relationships_13, echo=FALSE}
+levels(cut(cancer.df$povertyPercent, 3, include.lowest=TRUE))
+boxplot(deathRate ~ cut(povertyPercent, 3, include.lowest=TRUE, labels=c("low", "medium", "high")), 
+        data = cancer.df,
+        cex.axis = .7,
+        main = "Death Rate for different levels of poverty percent",
+        xlab = "poverty percent", ylab = "death rate")
+```
+
+
+```{r relationships_14, echo=FALSE}
+boxplot(povertyPercent ~ cut(PctPublicCoverage, 3, include.lowest=TRUE, labels=c("low", "medium", "high")), 
+        data = cancer.df,
+        cex.axis = .7,
+        main = "Poverty percent for different levels of public insurance coverage",
+        xlab = "public insurance coverage", ylab = "poverty percent")
+```
+***  
+
+## Analysis of Secondary Effects
+
+*What secondary variables might have confounding effects on the relationships you have identified? Ex- plain how these variables affect your understanding of the data.*
+
+***  
+
+##Conclusion
+
+*Summarize your exploratory analysis. What can you conclude based on your analysis? *
 
 
 
