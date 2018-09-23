@@ -387,3 +387,76 @@ hist(cancer.df$povertyPercent, breaks="fd", xlab = "Percentage of population bel
 ```
 
 The distribution of Poverty Percent is fairly normal with a slight right skew.
+
+# Bivariate Analysis of Secondary Variables
+
+After taking a first look into other variables, and performing necessary corrections, we must now understand how they relate to the primary key variables, in order to comprehend what else might be driving the relationship previously found between different types of health insurance coverage and cancer death rates.
+
+For each secondary variable introduced, we will analyze their relationship with the primary variables and with the output variable itself.
+
+_log(avgAnnCount)_
+
+Private Insurance Coverage
+
+```{r log(avgAnnCount) vs Private Insurance Coverage}
+plot(log(cancer.df$avgAnnCount),cancer.df$PctPrivateCoverage, ylab = "% population with private health insurance", xlab="log(avgAnnCount)", main= "Private Coverage vs log(avgAnnCount)")
+abline(lm(cancer.df$PctPrivateCoverage[!is.na(cancer.df$avgAnnCount)] ~ log(cancer.df$avgAnnCount[!is.na(cancer.df$avgAnnCount)])))
+
+cor(log(cancer.df$avgAnnCount),cancer.df$PctPrivateCoverage, use = "complete.obs")
+```
+There is a small positive correlation between the log(avgAnnCount) and the percentage of population with private health insurance coverage.
+
+Public Insurance Coverage
+
+```{r log(avgAnnCount) vs Public Insurance Coverage}
+plot(log(cancer.df$avgAnnCount),cancer.df$PctPublicCoverage, ylab = "% population with public health insurance", xlab="log(avgAnnCount)", main= "Public Coverage vs log(avgAnnCount)")
+abline(lm(cancer.df$PctPublicCoverage[!is.na(cancer.df$avgAnnCount)] ~ log(cancer.df$avgAnnCount[!is.na(cancer.df$avgAnnCount)])))
+
+cor(log(cancer.df$avgAnnCount),cancer.df$PctPublicCoverage, use = "complete.obs")
+```
+
+There is a small negative correlation between the log(avgAnnCount) and the percentage of population with public health insurance coverage, in a very close magnitude to the positive correlation encountrerd with the private health insurance coverage.We have seen before that, in terms of death rate, these two types of health insurance coverage have opposite behaviors. That being said, even if it is a small correlation, the fact that it presents itself in opposite ways and in similar magnitude to public and private health insurance coverage, just like death rates, indicates that we should dig deeper to check if the log(avgAnnCount) has a stronger positive correlation with death rate.
+
+Death Rate
+```{r log(avgAnnCount) vs Death Rate}
+plot(log(cancer.df$avgAnnCount),cancer.df$deathRate, ylab = "Cancer Death Rate", xlab="log(avgAnnCount)", main= "Death Rate vs log(avgAnnCount)")
+abline(lm(cancer.df$deathRate[!is.na(cancer.df$avgAnnCount)] ~ log(cancer.df$avgAnnCount[!is.na(cancer.df$avgAnnCount)])))
+
+cor(log(cancer.df$avgAnnCount),cancer.df$deathRate, use = "complete.obs")
+```
+
+At first sight, by just analyzing these charts and the correlation, it seems as we don't have much of a relation between these two variables. However, since they presented the same opposite behavior with public and private health insurance coverage, we want to take a deeper look into what might be going on.
+
+```{r boxplot}
+
+levels(cut(log(cancer.df$avgAnnCount), 7, include.lowest=TRUE))
+boxplot(deathRate ~ cut(log(avgAnnCount), 7, include.lowest=TRUE), 
+        data = cancer.df,
+        cex.axis = .7,
+        main = "Death Rate for different levels of incidence rate",
+        xlab = "log(avgAnnCount)", ylab = "Death Rate")
+```
+
+With this visualization it seems as the incidence has a positive correlation with the death rate up to a certain point. But passed that threshold (4.29, 5.54], the correlation becomes negative. One possible interpretation we had is that after a certain number of cancer reported cases, there is a more pressing need to invest in that disease, increasing the survival chances for those with it and, consequently, decreasing the death rates.
+
+_medIncome_
+
+Private Insurance Coverage
+
+```{r log(avgAnnCount) vs Private Insurance Coverage}
+plot(cancer.df$medIncome,cancer.df$PctPrivateCoverage, ylab = "% population with private health insurance", xlab="Median Income", main= "Private Coverage vs Median Income")
+abline(lm(cancer.df$PctPrivateCoverage ~ cancer.df$medIncome))
+
+cor(cancer.df$medIncome,cancer.df$PctPrivateCoverage)
+```
+By the chart presented and the strong positive correlation we atest something probably intuitevely known: populations with higher income tend to have more private health insurance coverage. We can take a deeper look by analyzing boxplots for different levels of median income:
+
+
+```{r boxplot}
+
+boxplot(cancer.df$PctPrivateCoverage ~ cut(cancer.df$medIncome, right=FALSE,seq(0,160000,20000),labels = c("0 - 20k","20k - 40k","40k - 60k","60k - 80k", "80k - 100k", "100k - 120k", "120k - 140k","140k +")),
+        main = "Private Coverage for different levels of income",
+        xlab = "Median Income", ylab = "Private Coverage")
+```
+
+It confirms what we previously stated. There is a clear correlation between wealth and private health insurance coverage
