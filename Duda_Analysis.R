@@ -97,9 +97,175 @@ cancer.df[cancer.df$deathRate > 300,]
 summary(cancer.df$avgAnnCount)
 # The maximum value catchwa our attention, mainly because it is in much higher
 # order of magnitude. Let's check the histogram for more enlightment:
-hist(cancer.df$avgAnnCount, xlab = "Mean Number of Incidences per County (2009-2013)", ylab="Frequency", main = "Histogram of Mean Cancer Incidences")
+hist(cancer.df$avgAnnCount, xlab = "Mean Number of Incidences per County (2009-2013)", ylab="Frequency", main = "Histogram of Mean Cancer Incidences", col= "deepskyblue4")
 #
 # By just analuzing the histogram, we see that its distribution is extremely right 
 # skewed. Let's check its density plot:
-densityPlot(cancer.df$avgAnnCount)
-# That extremily right-skewed
+densityPlot(cancer.df$avgAnnCount,xlab = "Mean Number of Incidences per County (2009-2013)", ylab="Density", main = "Density Plot of Mean Cancer Incidences", col="cadetblue4")
+# That extremely right-skewed distribution is an indicative that we could use
+# a log() transformation in this variable. 
+#
+summary(log(cancer.df$avgAnnCount))
+# It appears it was a good idea to do that. So we will transform log(avgAnnCount) 
+# into a new variable in our dataset
+cancer.df$logavgAnnCount=log(cancer.df$avgAnnCount)
+# Just confirming if everything went well:
+summary(cancer.df$logavgAnnCount)
+#
+# Checking the distribution by plotting a histogram:
+#
+hist(cancer.df$logavgAnnCount, main = "Histogram of log(avgAnnCount)", ylab= "frequency", xlab="log(avgAnnCount)", col = "aquamarine3")
+#
+# That second smaller peak is something worth investigating:
+cancer.df[cancer.df$logavgAnnCount > 7.25 & cancer.df$logavgAnnCount < 8 , ]
+# By looking at the data, something that stands out are avgAnnCount with the value
+# 1962.668, while all other values appear to be integers. It seems rather odd
+# that such an specific value would be the same in 205 different counties. The other
+# variables (except the derived one), seem to be fine. So we are setting both
+# avgAnnCount and logavgAnnCount to NA when avgAnnCount is 1962.668
+cancer.df[cancer.df$avgAnnCount==1962.667684, ]
+cancer.df$avgAnnCount[cancer.df$avgAnnCount==1962.667684] = NA
+cancer.df$logavgAnnCount[cancer.df$logavgAnnCount==log(1962.667684)] = NA
+# Now checking again the charts and the summaries:
+summary(cancer.df$avgAnnCount)
+hist(cancer.df$avgAnnCount, xlab = "Mean Number of Incidences per County (2009-2013)", ylab="Frequency", main = "Corrected Histogram of Mean Cancer Incidences", col= "deepskyblue4")
+densityPlot(cancer.df$avgAnnCount,xlab = "Mean Number of Incidences per County (2009-2013)", ylab="Density", main = "Corrected Density Plot of Mean Cancer Incidences", col="cadetblue4")
+summary(cancer.df$logavgAnnCount)
+hist(cancer.df$logavgAnnCount, main = "Corrected Histogram of log(avgAnnCount)", ylab= "frequency", xlab="log(avgAnnCount)", col = "aquamarine3")
+# The distribution of log(avgAnnCount) is fairly close to normal. Now we will
+# analyze the PctPrivateCoverage, the percentage of the population with private 
+# insurance coverage.
+summary(cancer.df$PctPrivateCoverage)
+# At first glance, the values for these variables seem to make sense. Let's
+# check its histogram:
+hist(cancer.df$PctPrivateCoverage, xlab="Percent of population with private health insurance coverage", ylab= "Frequency", main = "Histogram of Percentage of Private Coverage", col = "paleturquoise")
+# It is a bit of a left-skewed distribution, but other than that, very close
+# to a normal distribution
+# Now we will analyze another type of health insurance: the private provided by
+# employer.
+summary(cancer.df$PctEmpPrivCoverage)
+# Histogram:
+hist(cancer.df$PctEmpPrivCoverage, xlab = "Percentage of the population with private health insurance coverage through employment", ylab = "Frequency", main = "Histogram of Percentage of Private Coverage by Employer", col = "paleturquoise")
+# A very normal-like distribution
+# Now, for the last type of coverage, the public:
+summary(cancer.df$PctPublicCoverage)
+# Histogram:
+hist(cancer.df$PctPublicCoverage, xlab = "Percentage of the population with public health insurance coverage", ylab = "Frequency", main = "Histogram of Percentage of Public Coverage", col = "paleturquoise")
+# Also seems quite a normal distribution.
+# Our research question aims to understand the relation between Cancer Death Rates
+# and the health insurance coverage. We begin by analyzing the scatterplots.
+plot(cancer.df$PctPrivateCoverage,cancer.df$deathRate, xlab = "Percentage of population with private health insurance coverage", ylab="Death Rate", main= "Private Coverage vs Death Rate")
+# Since we want to check the relation between those two variables, adding a
+# linear regression line to the plot is an easy way to summarize the correlation
+# between these two variables:
+abline(lm(cancer.df$deathRate ~ cancer.df$PctPrivateCoverage))
+# We can visually notice that there is a negative correlation between private
+# coverage and death rates. We can make it more explicit by actually calculating
+# the correlation between those two variables.
+cor(x=cancer.df$PctPrivateCoverage,y=cancer.df$deathRate)
+# It confirms that we do have a moderate negative correlation between these two 
+# variables. Correlation is not causation, but it seems that counties that have
+# higher private health insurance coverage have smaller cancer death rates.
+# We can gain further insight by analyzing a boxplot. But not before binning the 
+# private coverage variable.
+cancer.df$PctPrivateCoverageCat<-cut(cancer.df$PctPrivateCoverage, seq(0,100,10), right=FALSE)
+boxplot(deathRate ~ PctPrivateCoverageCat, data= cancer.df, main = "Death Rate by Private Coverage", xlab="Private Coverage", ylab="Death Rate")
+#
+#
+# Now the Employer Private Coverage
+#
+plot(cancer.df$PctEmpPrivCoverage,cancer.df$deathRate, xlab = "Percentage of population with private health insurance by employment coverage", ylab="Death Rate", main= "Private Coverage by Employment vs Death Rate")
+# Since we want to check the relation between those two variables, adding a
+# linear regression line to the plot is an easy way to summarize the correlation
+# between these two variables:
+abline(lm(cancer.df$deathRate[!is.na(cancer.df$PctEmpPrivCoverage)] ~ cancer.df$PctPrivateCoverage[!is.na(cancer.df$PctEmpPrivCoverage)]))
+# We can visually notice that there is a negative correlation between private
+# coverage by employment and death rates. We can make it more explicit by actually
+# calculating the correlation between those two variables.
+cor(x=cancer.df$PctEmpPrivCoverage,y=cancer.df$deathRate, use = "complete.obs")
+# It confirms that we do have a moderate negative correlation between these two 
+# variables. Correlation is not causation, but it seems that counties that have
+# higher private health insurance by employment coverage have smaller cancer death
+#rates.
+# We can gain further insight by analyzing a boxplot. But not before binning the 
+# private coverage variable.
+cancer.df$PctEmpPrivCoverageCat<-cut(cancer.df$PctEmpPrivCoverage, seq(0,100,10), right=FALSE)
+boxplot(deathRate ~ PctEmpPrivCoverageCat, data= cancer.df, main = "Death Rate by Private Coverage by Employment", xlab="Private Coverage by Employment", ylab="Death Rate")
+#
+# Public Coverage
+#
+plot(cancer.df$PctPublicCoverage,cancer.df$deathRate, xlab = "Percentage of population with public health insurance coverage", ylab="Death Rate", main= "Public Coverage vs Death Rate")
+# Since we want to check the relation between those two variables, adding a
+# linear regression line to the plot is an easy way to summarize the correlation
+# between these two variables:
+abline(lm(cancer.df$deathRate ~ cancer.df$PctPublicCoverage))
+# We can visually notice that there is a positive correlation between public
+# coverage and death rates. We can make it more explicit by actually calculating
+# the correlation between those two variables.
+cor(x=cancer.df$PctPublicCoverage,y=cancer.df$deathRate)
+# It confirms that we do have a moderate positive correlation between these two 
+# variables. Correlation is not causation, but it seems that counties that have
+# higher public health insurance coverage have higher cancer death rates.
+# We can gain further insight by analyzing a boxplot. But not before binning the 
+# private coverage variable.
+cancer.df$PctPublicCoverageCat<-cut(cancer.df$PctPublicCoverage, seq(0,100,10), right=FALSE)
+boxplot(deathRate ~ PctPublicCoverageCat, data= cancer.df, main = "Death Rate by Public Coverage", xlab="Public Coverage", ylab="Death Rate")
+# We are now able to develop some hypothesis.
+# 1. Private Health Insurance provide a wider range of procedures and quicker
+# diagnosys and treatment, key factors for cancer survival
+# 2. Employer Private Health Insurance also do that, but maybe not as efficiently 
+# as a Private Insurance
+# 3. Public Health Insurance may take a longer time to provide the necessary 
+# diagnosys and treatment, and the stage in which cancer is found and treated
+# is of fundamental importance for higher survival rates
+# 
+# However, other factors might be influencing both the coverage by type of health
+# insurance and the death rates, so it is a good idea to dig deeper into what might
+# be affecting health insurance coverage by type. Let's see if we can find any
+# relation between coverage of each type of health insurance and the number of
+# incidences of cancer.
+#
+plot(cancer.df$PctPrivateCoverage,cancer.df$logavgAnnCount, xlab = "Percentage of population with private health insurance coverage", ylab="Average Annual Incidences", main= "Annual Incidences by Private Coverage")
+# Let's include a linear regression line to have a clearer view:
+abline(lm(cancer.df$logavgAnnCount ~ cancer.df$PctPrivateCoverage))
+# Check correlation
+cor(x=cancer.df$PctPrivateCoverage, y=cancer.df$logavgAnnCount, use="complete.obs")
+# There is no important correlation between the Average Annual Incidences of Cancer
+# and the Private Health Insurance Coverage
+#
+plot(cancer.df$PctEmpPrivCoverage,cancer.df$avgAnnCount, xlab = "Percentage of population with private health insurance by employment coverage", ylab="Average Annual Incidences", main= "Annual Incidences by Private Coverage by Employment")
+# Let's include a linear regression line to have a clearer view:
+abline(lm(cancer.df$avgAnnCount ~ cancer.df$PctEmpPrivCoverage))
+# Check correlation
+cor(x=cancer.df$PctEmpPrivCoverage, y=cancer.df$avgAnnCount, use="complete.obs")
+# There is no important correlation between the Average Annual Incidences of Cancer
+# and the Private Health Insurance by Employment Coverage
+#
+plot(cancer.df$PctPublicCoverage,cancer.df$avgAnnCount, xlab = "Percentage of population with public health insurance coverage", ylab="Average Annual Incidences", main= "Annual Incidences by Public Coverage")
+# Let's include a linear regression line to have a clearer view:
+abline(lm(cancer.df$avgAnnCount ~ cancer.df$PctPublicCoverage))
+# Check correlation
+cor(x=cancer.df$PctPublicCoverage, y=cancer.df$avgAnnCount, use="complete.obs")
+# There is no important correlation between the Average Annual Incidences of Cancer
+# and the Public Health Insurance Coverage.
+#
+# We are now going to evaluate the relation between the median income and the
+# percentage of health insurance coverage by type.
+#
+#
+plot(cancer.df$medIncome,cancer.df$PctPrivateCoverage, xlab = "Median Income" , ylab="Percentage of population with public health insurance coverage", main= "Median Income vs Private Health Insurance Coverage")
+# Let's include a linear regression line to have a clearer view:
+abline(lm(cancer.df$PctPrivateCoverage ~ cancer.df$medIncome))
+# It seems that we have a strong positive correlation between the median income
+# and the Percentage of Population with Private Health Insurance Coverage. We
+# can check the correlation between these variables.
+cor(x=cancer.df$medIncome, y=cancer.df$PctPrivateCoverage)
+# As expected, we have a high positive correlation between median income and
+# the percentage of health insurance coverage.
+# Let us check the boxplot by the binned median income and the binned percetage of 
+# private health insurance coverage.
+
+# not strictly linear (try logarithmi)
+cancer.df$IncomeCat<-cut(cancer.df$medIncome, seq(0,160000,20000), right=FALSE, labels=c("0 - 20k","20k - 40k", "40k - 60k", "60k - 80k", "80k - 100k", "100k - 120k", "120k - 140k", "140k - 160k"))
+summary(cancer.df$IncomeCat)
+boxplot(PctPrivateCoverageCat ~ IncomeCat, data= cancer.df, main = "Percentage of Private Health Insurance Coverage by Median Income", xlab="Median Income", ylab="Private Coverage")
