@@ -1,6 +1,9 @@
 ---
-title: "Cancer EDA"
-output: pdf_document
+title: "Cancer EDA Lina + Duda"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -354,7 +357,7 @@ cancer.df$avgAnnCount[cancer.df$avgAnnCount==1962.667684] = NA
 
 Now we can go back to analyzing the avgAnnCount:
 
-```{r avgAnnCount}
+```{r avgAnnCount analysys}
 hist(cancer.df$avgAnnCount, breaks="fd", xlab = "Mean Number of Incidences per County (2009-2013)", ylab="Frequency", main = "Corrected Histogram of Mean Cancer Incidences", col= "gray")
 ```
 That extremely right-skewed distribution is an indicative that we could use a log() transformation in this variable. Let's see how the variable is before the transformation.
@@ -368,7 +371,7 @@ Now to the analysis of the log(avgAnnCount)
 summary(log(cancer.df$avgAnnCount))
 ```
 
-```{r log(avgAnnCount)}
+```{r log(avgAnnCount) +}
 hist(log(cancer.df$avgAnnCount), breaks="fd", xlab = "log(avgAnnCount)", ylab="Frequency", main = "Histogram of log(avgAnnCount)", col= "gray")
 ```
 
@@ -443,20 +446,126 @@ _medIncome_
 
 Private Insurance Coverage
 
-```{r log(avgAnnCount) vs Private Insurance Coverage}
-plot(cancer.df$medIncome,cancer.df$PctPrivateCoverage, ylab = "% population with private health insurance", xlab="Median Income", main= "Private Coverage vs Median Income")
-abline(lm(cancer.df$PctPrivateCoverage ~ cancer.df$medIncome))
+```{r medIncome vs Private Insurance Coverage}
+scatterplot(cancer.df$medIncome,cancer.df$PctPrivateCoverage, ylab = "% population with private health insurance", xlab="Median Income", main= "Private Coverage vs Median Income", col=palette(), boxplots = FALSE, legend = TRUE)
 
 cor(cancer.df$medIncome,cancer.df$PctPrivateCoverage)
 ```
 By the chart presented and the strong positive correlation we atest something probably intuitevely known: populations with higher income tend to have more private health insurance coverage. We can take a deeper look by analyzing boxplots for different levels of median income:
 
 
-```{r boxplot}
+```{r boxplot +}
 
-boxplot(cancer.df$PctPrivateCoverage ~ cut(cancer.df$medIncome, right=FALSE,seq(0,160000,20000),labels = c("0 - 20k","20k - 40k","40k - 60k","60k - 80k", "80k - 100k", "100k - 120k", "120k - 140k","140k +")),
+boxplot(cancer.df$PctPrivateCoverage ~ cut(cancer.df$medIncome, right=FALSE,seq(20000,140000,20000),labels = c("20k - 40k","40k - 60k","60k - 80k", "80k - 100k", "100k - 120k", "120k - 140k")),
         main = "Private Coverage for different levels of income",
         xlab = "Median Income", ylab = "Private Coverage")
 ```
 
-It confirms what we previously stated. There is a clear correlation between wealth and private health insurance coverage
+It confirms what we previously stated. There is a clear correlation between wealth and private health insurance coverage.
+
+Public Insurance Coverage
+
+```{r medIncome vs Public Insurance Coverage}
+scatterplot(cancer.df$medIncome,cancer.df$PctPublicCoverage, ylab = "% population with public health insurance", xlab="Median Income", main= "Public Coverage vs Median Income", col=palette(), boxplots = FALSE, legend = TRUE)
+
+cor(cancer.df$medIncome,cancer.df$PctPublicCoverage)
+```
+
+Similarly to what we have seen with the Private Health Insurance Coverage, there is a clear negative correlation between Public Health Insurance Coverage and the median income. That can be interpreted that populations with lower income tend to be more dependent on Public Health Insurance, probably because the Private option is not affordable. We can take a deeper look by analyzing boxplots for different levels of median income:
+
+```{r boxplot ++}
+
+boxplot(cancer.df$PctPublicCoverage ~ cut(cancer.df$medIncome, right=FALSE,seq(20000,140000,20000),labels = c("20k - 40k","40k - 60k","60k - 80k", "80k - 100k", "100k - 120k", "120k - 140k")),
+        main = "Public Coverage for different levels of income",
+        xlab = "Median Income", ylab = "Public Coverage")
+```
+
+The boxplot only confirms what we have noticed before. For higher levels of income, the publich health insurance coverage is lower. That means this variable presents also presents the opposite behavior as death rates. The higher the median income, higher the private coverage and lower the public coverage. So we should probably check if there is a direct relation between the median income and death rates.
+
+Death Rates
+
+```{r medIncome vs deathRates}
+scatterplot(cancer.df$medIncome,cancer.df$deathRate, ylab = "Cancer Death Rates", xlab="Median Income", main= "Median Income vs Cancer Death Rates", col=palette(), boxplots = FALSE, legend = TRUE)
+
+cor(cancer.df$medIncome,cancer.df$deathRate)
+```
+
+We see that there is a stronger negative correlation between median income and death rates than private health insurance coverage and death rates, which may lead us to the hypothesis that actually socieconomic factors have more to do with death rates than the percent coverage by type of health insurance itself. Taking a deeper look by analyzing the boxplot by levels of median income may provide us with better insights
+
+```{r boxplot+++}
+
+boxplot(cancer.df$deathRate ~ cut(cancer.df$medIncome, right=FALSE,seq(20000,140000,20000),labels = c("20k - 40k","40k - 60k","60k - 80k", "80k - 100k", "100k - 120k", "120k - 140k")),
+        main = "Cancer Death Rates for different levels of income",
+        xlab = "Median Income", ylab = "Cancer Death Rates")
+```
+
+It seems to confirm our hypothesis, however, taking a deeper look into another socieconomic variable might strenghten our hypothesis.
+
+_povertyPercent_
+
+Private Insurance Coverage
+
+```{r povertyPercent vs Private Insurance Coverage}
+scatterplot(cancer.df$povertyPercent,cancer.df$PctPrivateCoverage, ylab = "% population with private health insurance", xlab="% Population below poverty line", main= "Private Coverage vs Poverty Percent", col=palette(), boxplots = FALSE, legend = TRUE)
+
+cor(cancer.df$povertyPercent,cancer.df$PctPrivateCoverage)
+```
+
+The strongest relation we have encountered so far, we see that populations with higher percentage below poverty line tend to have less private health insurance coverage, the opposite behavior to the median income variable. Taking a look into boxplots provides us with a indicative of validity of such hypothesis:
+
+```{r boxplot++++}
+
+boxplot(cancer.df$PctPrivateCoverage ~ cut(cancer.df$povertyPercent, right=FALSE,seq(0,50,10),labels = c("0% - 10%","10% - 20%","20% - 30%","30% - 40%", "40% - 50%")),
+        main = "Private Coverage for different levels of poverty percent",
+        xlab = "% Population below poverty line", ylab = "Private Coverage")
+```
+
+As expected, it presents an opposite behavior to median income. In this case, higher the poverty (and lower the income, as we previously saw), the lower private health insurance coverage.
+
+Public Insurance Coverage
+
+```{r povertyPercent vs Public Insurance Coverage}
+scatterplot(cancer.df$povertyPercent,cancer.df$PctPublicCoverage, ylab = "% population with public health insurance", xlab="% Population below poverty line", main= "Public Coverage vs Poverty Percent", col=palette(), boxplots = FALSE, legend = TRUE)
+
+cor(cancer.df$povertyPercent,cancer.df$PctPublicCoverage)
+```
+
+As expected by our previous analysis, the higher the poverty, more people rely on public health insurance. A deeper look into the levels of poverty vs public health coverage might provide us with better insights:
+
+```{r boxplot+++++}
+
+boxplot(cancer.df$PctPublicCoverage ~ cut(cancer.df$povertyPercent, right=FALSE,seq(0,50,10),labels = c("0% - 10%","10% - 20%","20% - 30%","30% - 40%", "40% - 50%")),
+        main = "Public Coverage for different levels of poverty percent",
+        xlab = "% Population below poverty line", ylab = "Public Coverage")
+```
+
+While analyzing the median income, we formulated the hypothesis that maybe the death rate is driven more due to socio-economic factors than to the percentage by type of health insurance coverage. We might confirm that by analyzing also the direct relation between death rate and poverty percent, with the result strenghtening or weakening this hypothesis.
+
+deathRate
+
+```{r povertyPercent vs deathRate}
+scatterplot(cancer.df$povertyPercent,cancer.df$deathRate, ylab = "Cancer Death Rate", xlab="% Population below poverty line", main= "Cancer Death Rate vs Poverty Percent", col=palette(), boxplots = FALSE, legend = TRUE)
+
+cor(cancer.df$povertyPercent,cancer.df$deathRate)
+```
+
+At first glance, we get a stronger positive relation of death rates and poverty percent than death rates and public health insurance coverage and death rates, indicating that we might be on the right track. To be more sure of it, we can make use of a boxplot by levels of poverty:
+
+```{r boxplot vi}
+
+boxplot(cancer.df$deathRate ~ cut(cancer.df$povertyPercent, right=FALSE,seq(0,50,10),labels = c("0% - 10%","10% - 20%","20% - 30%","30% - 40%", "40% - 50%")),
+        main = "Cancer Death Rates for different levels of poverty percent",
+        xlab = "% Population below poverty line", ylab = "Cancer Death Rates")
+```
+
+That all seems to confirm what we have seen analyzing the median income vs the death rates. Higher income / Lower poverty counties tend to have lower death rates.
+
+### Conclusion: insurance coverage per ce doesn't improve cancer mortality rates, however, better social economic conditions seems to do so
+
+1. The opposite behavior of public health insurance coverage and private health insurance coverage to the death rates are most likely due to an underlying factor: social economic conditions.
+
+2. Higher income populations tend to have lower cancer death rates, and with more money, more access to private health insurance.
+
+3. Populations with higher percentage of poverty tend to have higher cancer death rates, and poverty conditions limitate the access to private health insurance coverage, being more dependent on the public alternative.
+
+4. Therefore, there is stronger evidence that social economic factors (income, poverty) are stronger factors in explaining the cancer death rates than health insurance per ce, being that the coverage by type of health insurance is also probably affected by these factors, explaining their opposite behaviors with death rates.
