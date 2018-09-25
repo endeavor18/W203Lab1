@@ -127,18 +127,18 @@ cancer.df$binnedInc=relevel(cancer.df$binnedInc, '[22640, 34218.1]')
 ## Data Transformation for Analysis
 
 The main outcome variable we are going to focus on is Cancer Mortality Rate (variable: DeathRate)  
-We're going to explore a set of variables that represent the levels of health insurance coverage for individual counties.There are three variables in the original dataset that are related to insurance:  
+We're going to explore a set of variables that represent the levels of health insurance coverage for individual counties.There are three variables in the original data set that are related to insurance:  
 
 : Primary variables for exploration
 
 |Variable Name           |Description                                                                     |
 |:-----------------------|:-------------------------------------------------------------------------------| 
-|**DeathRate             |Main Outcome variable: Number of deaths recorded annualy per 100000 people      |
+|**DeathRate             |Main Outcome variable: Number of deaths recorded annually per 100000 people      |
 |**PctPrivateCoverage**  |Percentage of the population with private insurance coverage                    |
 |**PctPublicCoverage**   |Percentage of the population with public insurance coverage                     |
 |**PctEmpPrivCoverage**  |Percentage of the population with employer-sponsored private insurance coverage |
 
-In addition, we will look at a few variables of interest as a secondary analysis: Cancer Incident Count, Median Income and Povery Rate.
+In addition, we will look at a few variables of interest as a secondary analysis: Cancer Incident Count, Median Income and Poverty Rate.
 
 : Secondary variables for exploration
 
@@ -149,7 +149,7 @@ In addition, we will look at a few variables of interest as a secondary analysis
 |**povertyPercent**      |Percentage of the population below poverty line                                 |
 
 
-For the purposes of our exploratory analysis, we would like to conduct a more comprehensive research on various types and levels of insurance coverage and their effects on the mortality rates, so it makes sense to define a few more variables that can be derived from the original dataset.  
+For the purposes of our exploratory analysis, we would like to conduct a more comprehensive research on various types and levels of insurance coverage and their effects on the mortality rates, so it makes sense to define a few more variables that can be derived from the original data set.  
 For example, we would like to include data about the populations with no insurance coverage, as well as the observations where individuals have both private and public insurance. It can also be more revealing to treat the employer-sponsored coverage as a relative proportion of the private coverage rather than an absolute value.  
 
 : Additional derived variables for exploration
@@ -161,7 +161,7 @@ For example, we would like to include data about the populations with no insuran
 |**EmpSponsoredPct**      |Percentage of the private insurance sponsored by employers                      |
 
 
-We will now add these new variables to our original dataset:  
+We will now add these new variables to our original data set:  
 
 ```{r transformation}
 cancer.df$PctDoubleCoverage=cancer.df$PctPublicCoverage + cancer.df$PctPrivateCoverage - 100
@@ -177,7 +177,7 @@ cancer.df$EmpSponsoredPct = cancer.df$PctEmpPrivCoverage / cancer.df$PctPrivateC
 
 #Univariate Analysis of Key Variables
 
-Our key variables in this investigation will be deathRate (target outcome variable) and several indpendent variables representing insurance coverage for counties' populations.    
+Our key variables in this investigation will be deathRate (target outcome variable) and several independent variables representing insurance coverage for counties' populations.    
 
 ### Cancer Mortality Rate (**deathRate** variable)
 Let's start with the target variable and summarize it:
@@ -308,7 +308,7 @@ The result shows that 80% of the counties have less than 7% of the population wi
 ### Mortality rates for different levels of Private Insurance Coverage  
 
 Our first question is whether having access to a private insurance coverage is correlated with cancer mortality rates. A reasonable hypothesis would be that a cancer patient with a private insurance would be able to afford better treatment options. As a result, she or he will have better chances of survival, so we should expect negative correlation between deathRate and PctPrivateCoverage.  
-Let's build a scatterplot showing the relationshoip between these two variables.   
+Let's build a scatterplot showing the relationship between these two variables.   
 In order to get a better insight into what linear relationship exists in the data, we add the ordinary least squares 
 regression line to the plot and calculate the correlation.  
 
@@ -320,7 +320,7 @@ abline(lm(cancer.df$deathRate ~ cancer.df$PctPrivateCoverage))
 
 cor(cancer.df$deathRate, cancer.df$PctPrivateCoverage)
 ```
-Both from the plot and from the correlation value (-0.39) we can see that they're in agreement with our original hypothesis that mortality rates ared lower for the populations with higher percentage of private insurance coverage. 
+Both from the plot and from the correlation value (-0.39) we can see that they're in agreement with our original hypothesis that mortality rates are lower for the populations with higher percentage of private insurance coverage. 
 The relationship does appear to be linear from about 40% of coverage onward (this is where the majority of observations seem to fall). At the lower end of the graph, the spread of values is much higher.  
 Despite showing the overall trend, the scatterplot is quite noisy, so we might want to confirm our conclusion by generating boxplots for different categories of coverage.   
 First, we'll split the range of PctPrivateCoverage variables into three bins and label them as "low", "medium", and "high" brackets of private insurance coverage. We then will build three separate boxplots for these categories and see how they're distributed relative to deathRate.  
@@ -333,14 +333,14 @@ boxplot(deathRate ~ cut(PctPrivateCoverage, 3, include.lowest=TRUE,
         main = "Death Rate for different levels of private insurance coverage",
         xlab = "private insurance coverage", ylab = "death rate")
 ```
-The boxplot shows a clear downward trend from the "medium" to "high" category, with the majority of values clustered around the median. The "low" category boxplot, on the other hand, has a much wider spread of data points. We might conclude, therefore, that the effect of private insurance on mortality rates is only noticable for the percantage of coverage which is above certain threshold (~40%).  
+The boxplot shows a clear downward trend from the "medium" to "high" category, with the majority of values clustered around the median. The "low" category boxplot, on the other hand, has a much wider spread of data points. We might conclude, therefore, that the effect of private insurance on mortality rates is only noticeable for the percentage of coverage which is above certain threshold (~40%).  
 The "medium" category also includes the high death rate outlier we've identified earlier (>350). Therefore, the high mortality rate can't be explained by the inadequate private insurance coverage.  
 
 __Summary of observations:__  
 
 1. There's a mild negative correlation between cancer mortality rates and access to the private insurance coverage
 
-2. The effect of negative correlation becomes noticable only after the coverage percentage reaches ~40%. Below this point, the data spread is much wider and the effect of private coverage is not obvious.
+2. The effect of negative correlation becomes noticeable only after the coverage percentage reaches ~40%. Below this point, the data spread is much wider and the effect of private coverage is not obvious.
 
 
 ### Mortality rates for different levels of Public Insurance Coverage
@@ -371,7 +371,7 @@ There's also no salient threshold effect we observed earlier: the relationship a
 
 __Summary of observations:__
 
-1. There's a noticeble positive correlation between cancer mortality rates and availability of public insurance coverage   
+1. There's a noticeable positive correlation between cancer mortality rates and availability of public insurance coverage   
 
 2. The relationship is very close to the linear one throughout the entire range of coverage's percentages .  
 
@@ -430,7 +430,7 @@ cor(cancer.df$deathRate, cancer.df$EmpSponsoredPct)
 
 __Summary of observations:__
 
-1. From the data analysis above, we don't detect any noticable relationships between the cancer mortality rates and the composition of the private insurance coverage.  
+1. From the data analysis above, we don't detect any noticeable relationships between the cancer mortality rates and the composition of the private insurance coverage.  
 
 
 
@@ -442,7 +442,7 @@ While we do see correlation between cancer mortality rate and percent of insuran
 
 Given the above, we will to look at what else might be at play. Given the increased recognition of social determinant of health as playing an important factor in individual health outcomes, we will focus in on socioeconomic factors using the Median income and Poverty Percent variables as a proxy.  
 
-We will also evalue how incident rate (which we assume is the number of people diagnosed with cancer annually) relates to mortality rate.
+We will also evaluate how incident rate (which we assume is the number of people diagnosed with cancer annually) relates to mortality rate.
 
 
 ### Mortality Rates vs. Median Income
@@ -457,9 +457,9 @@ boxplot(deathRate ~ binnedInc, data = cancer.df,
 ```
 
 
-We see that there is a strong negative correlation between median income and death rates than private health insurance coverage and death rates, which may lead us to the hypothesis that actually socieconomic factors have more to do with death rates than the percent coverage by type of health insurance itself.   
+We see that there is a strong negative correlation between median income and death rates than private health insurance coverage and death rates, which may lead us to the hypothesis that actually socioeconomic factors have more to do with death rates than the percent coverage by type of health insurance itself.   
 
-Taking a deeper look into another socieconomic variable might strenghten our hypothesis.  
+Taking a deeper look into another socioeconomic variable might strengthen our hypothesis.  
 
 
 ### Mortality Rates vs. Poverty Percent
@@ -475,7 +475,7 @@ boxplot(cancer.df$deathRate ~ cut(cancer.df$povertyPercent, right=FALSE,seq(0,50
 
 This  seems to confirm what we have seen analyzing the median income vs the death rates. Higher income / Lower poverty counties tend to have lower death rates. 
 
-Given the strong positive correlation between poverty levels and mortality rate, we should expore the relationship between poverty rates and insurance coverage.
+Given the strong positive correlation between poverty levels and mortality rate, we should explore the relationship between poverty rates and insurance coverage.
 
 
 
@@ -528,19 +528,20 @@ Curiously enough, it seems as though the incidence rate has a positive correlati
 
 # Conclusions
 
-Our main conclusion is that access to insurance by itself is not a fundamental driver of improving cancer mortality rates. Socioeconomic conditions (as measured by poverty rate) seem to have a much larger and direct impact.  
+**Our main conclusion is that access to insurance by itself is not a fundamental driver of improving cancer mortality rates. Socioeconomic conditions (as measured by poverty rate) seem to have a much larger and direct impact. ** 
 
 The initial data analysis we performed did not conclusively support our hypothesis that cancer patients who have access to health insurance have better chances of survival. It showed weak corroborating evidence in the case of private insurance , and stronger evidence to the contrary for public insurance.  
 One of the important findings is that higher levels of public insurance coverage are strongly correlated with lower percentage of private insurance coverage. The relative amount of private coverage sponsored by employers have no detectable relationships with cancer mortality rates.  
 
-In order to explain these counter-intuitive results, as well as the 'threshold effect' of private coverage, we decided to explore other variables that might directly influence these relationships, turning our attention to sociioeconomic factors, specifically poverty rate and median income.  
-WHat we found was revealing:  
-- Higher income populations tend to have lower cancer death rates, and with more money, more access to private health insurance.
-- Populations with higher percentage of poverty tend to have higher cancer death rates, and poverty conditions limitate the access to private health insurance coverage, being more dependent on the public alternative.  
+In order to explain these counter-intuitive results, as well as the 'threshold effect' of private coverage, we decided to explore other variables that might directly influence these relationships, turning our attention to socioeconomic factors, specifically poverty rate and median income.  
 
-Therefore, there is stronger evidence that social economic factors (income, poverty) are stronger factors in explaining the cancer death rates than health insurance per ce, being that the coverage by type of health insurance is also probably affected by these factors, explaining their opposite behaviors with death rates.
+What we found was revealing:  
+1. Higher income populations tend to have lower cancer death rates, and with more money, more access to private health insurance.  
+2. Populations with higher percentage of poverty tend to have higher cancer death rates, and poverty conditions limit the access to private health insurance coverage, being more dependent on the public alternative.  
 
-Finally, we did see an interesting, an at first counterintuitive trend in the data: Incident rate and mortality rate are strongly positively correlated upto a certain point. Beyond that point, the correlation is negative, perhaps suggesting that in counties with high incident rates, more resources as being brought to bear, thus throttling mortality rates?  
+Therefore, there is stronger evidence that social economic factors (income, poverty) are stronger factors in explaining the cancer death rates than health insurance per se, being that the coverage by type of health insurance is also probably affected by these factors, explaining their opposite behaviors with death rates.
+
+Finally, we did see an interesting, an at first counter intuitive trend in the data: Incident rate and mortality rate are strongly positively correlated up to a certain point. Beyond that point, the correlation is negative, perhaps suggesting that in counties with high incident rates, more resources as being brought to bear, thus throttling mortality rates?  
 
 This of course, is good fodder for a future exploratory data analysis.
 
