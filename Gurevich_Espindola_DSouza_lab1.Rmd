@@ -1,0 +1,526 @@
+---
+Authors: 'Lina Gurevich, Duda Espindola, Jonathan D''Souza '
+Date: 9/25/2018
+Output:
+  pdf_document: default
+  html_document: default
+Title: Exploratory Data Analysis - Cancer Mortality Rate
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning=FALSE)
+library(car)
+library(gridExtra)
+```
+#Exploratory Data Analysis - Cancer Mortality Rates
+### **W203 Lab Project (Fall 2018)**
+### *Authors: Lina Gurevich, Duda Espindola, Jonathan D'Souza*
+***
+
+# Introduction  
+Given a data set for cancer incidences for a select group of counties, this study attempts to explore the potential relationships between cancer mortality rate and other variables in the data set.  
+  
+The *Affordable Care Act* (*ACA* for short, or more popularly known as *Obamacare*) was signed into law in 2010 and implemented in the years following that. Numerous studies since then have suggested that the provisions in the ACA for increased coverage rates have increased healthcare access in general across the U.S. Opinions (and research results) are mixed however when it comes to linking this increase in access to a change in outcomes (positive or otherwise).  
+  
+Piqued by the question above, we decided, after some discovery and discussion, to focus our exploratory data analysis primarily on variables related to health insurance and understand their impact (if any) on cancer mortality. We also looked at incident count, income level and poverty rates as a secondary analysis, to understand how they might interact with mortality and insurance coverage rates.  
+  
+Our conclusions are summarized at the end of this brief.  
+
+*******
+  
+    
+     
+## Initial Loading and Validation of Data Set  
+  
+### Set Up  
+```{r LoadData}
+raw_data<-read.csv("cancer.csv")  #Assumes file in current working directory
+cancer.df<-raw_data #Keep one copy of raw data as is
+```
+  
+### Summarize Data Set  
+```{r ShowData}
+str(cancer.df)
+```
+  
+The data set has data that spans 30 variables for 3047 different counties (based on the number of levels in the Geography variable being the same as total number of observations).
+We note that most of the variables are numeric variables, with the exception of Geography and Binned Income which are categorical.  
+  
+### Validation and cleaning of  variables.  
+**Check for NA Values**  
+```{r CheckData}
+colSums(is.na(cancer.df)) 
+```
+  
+There are 2 variables with null values: PctSomeCol18_24 and PctEmployed16_Over.      
+  
+**Clean up of MedianAge variable**
+From the summary of the Median Age it is clear that there are some outliers above 100 years given the max of 624 compared to median & mean in the 40s.      
+  
+```{r MedianAge_Validation_1}
+summary(cancer.df$MedianAge)
+```
+  
+Looking at just the outliers, they are clearly erroneous values.   
+  
+```{r MedianAge_Validation_2}
+ageoutliers<-cancer.df[cancer.df$MedianAge>100,]  
+summary(ageoutliers$MedianAge) # 
+```
+  
+Based on the order of magnitude difference (around 10), we assume that there was a data capture error and divide all these values by 10 to create a normalized data set.  
+  
+```{r MedianAge_Validation_3}
+#Divide outliers by 10
+cancer.df$MedianAge[cancer.df$MedianAge>150]<-cancer.df$MedianAge/10
+summary(cancer.df$MedianAge)
+```
+  
+
+
+**Validation & Clean up of avgAnnCount**
+  
+Annual Incident Count is better expressed as a percentage of county population.  
+```{r Incident_Count_1}
+cancer.df$AnnCountPercent<-100*cancer.df$avgAnnCount/cancer.df$popEst2015
+summary(cancer.df$AnnCountPercent)
+```
+  
+Having more than an incident count of more than 100% is clearly not possible (more incidents of cancer diagnoses than the population of the county). We look for where the outliers may be coming from.  
+```{r Incident_Count_2}
+#Assuming anything over 50% incident rate has to be an error
+outliers<-cancer.df[cancer.df$AnnCountPercent>50,] 
+summary(outliers$avgAnnCount)
+```
+  
+It is clear that all these observations have the exact same erroneous value for Average Annual Count. We will set these to NULL and recalculate average annual incident count as a percent of population.  
+```{r Incident_Count_3}
+error_value<-outliers[1,"avgAnnCount"]
+#Assuming any observation with this value is an error, set them to NA
+cancer.df$avgAnnCount[cancer.df$avgAnnCount==error_value]<-NA
+#Recalculate percentages
+cancer.df$AnnCountPercent<-with(cancer.df,100*avgAnnCount/popEst2015) 
+summary(cancer.df$AnnCountPercent)
+```
+  
+**Releveling of binned Median Income**  
+We notice that one of the categories of the binnedInc variable is out of order, so we adjust it.  
+```{r binnedInc}
+levels(cancer.df$binnedInc)
+cancer.df$binnedInc=relevel(cancer.df$binnedInc, '[22640, 34218.1]')
+```
+  
+***
+  
+## Data Transformation for Analysis  
+  
+The main outcome variable we are going to focus on is Cancer Mortality Rate (variable: DeathRate)  
+We're going to explore a set of variables that represent the levels of health insurance coverage for individual counties.There are three variables in the original data set that are related to insurance:   
+  
+: Primary variables for exploration
+
+|Variable Name           |Description                                                                     |
+|:-----------------------|:-------------------------------------------------------------------------------| 
+|**DeathRate             |Main Outcome variable: Number of deaths recorded annually per 100000 people      |
+|**PctPrivateCoverage**  |Percentage of the population with private insurance coverage                    |
+|**PctPublicCoverage**   |Percentage of the population with public insurance coverage                     |
+|**PctEmpPrivCoverage**  |Percentage of the population with employer-sponsored private insurance coverage |
+  
+In addition, we will look at a few variables of interest as a secondary analysis: Cancer Incident Count, Median Income and Poverty Rate.  
+  
+: Secondary variables for exploration
+
+|Variable Name           |Description                                                                     |
+|:-----------------------|:-------------------------------------------------------------------------------| 
+|**avgAnnCount**         |Annual average cancer incident count                                            |
+|**medIncome**           |Median Income for the population                                                |
+|**povertyPercent**      |Percentage of the population below poverty line                                 |
+  
+    
+For the purposes of our exploratory analysis, we would like to conduct a more comprehensive research on various types and levels of insurance coverage and their effects on the mortality rates, so it makes sense to define a few more variables that can be derived from the original data set.  
+For example, we would like to include data about the populations with no insurance coverage, as well as the observations where individuals have both private and public insurance. It can also be more revealing to treat the employer-sponsored coverage as a relative proportion of the private coverage rather than an absolute value.    
+  
+  
+: Additional derived variables for exploration  
+
+|Variable Name            |Description                                                                     |
+|:------------------------|:-------------------------------------------------------------------------------| 
+|**PctPNoCoverage**       |Percentage of the population with no insurance coverage                         |
+|**PctDoubleCoverage**    |Percentage of the population with both private and public insurance coverage    |
+|**EmpSponsoredPct**      |Percentage of the private insurance sponsored by employers                      |
+  
+  
+We will now add these new variables to our original data set:  
+```{r transformation}
+cancer.df$PctDoubleCoverage=cancer.df$PctPublicCoverage + cancer.df$PctPrivateCoverage - 100
+cancer.df$PctDoubleCoverage[cancer.df$PctDoubleCoverage < 0] = 0
+cancer.df$PctNoCoverage = 100 - cancer.df$PctPublicCoverage - cancer.df$PctPrivateCoverage
+cancer.df$PctNoCoverage[cancer.df$PctNoCoverage < 0] = 0
+cancer.df$EmpSponsoredPct = cancer.df$PctEmpPrivCoverage / cancer.df$PctPrivateCoverage * 100
+```
+  
+
+  
+***  
+  
+#Univariate Analysis of Key Variables
+  
+Our key variables in this investigation will be deathRate (target outcome variable) and several independent variables representing insurance coverage for counties' populations.    
+  
+### Cancer Mortality Rate (**deathRate** variable)
+Let's start with the target variable and summarize it:
+```{r deathRate}
+summary(cancer.df$deathRate)
+```
+  
+We see that this is a metric variable with its mean and median values very close to each other. There are no missing values and no obviously wrong or suspicious outliers.
+  
+To better visualize the variable's values distribution, we plot the histogram.  
+```{r}
+with(cancer.df, hist(deathRate,  col = "gray", 
+                     main="Histogram of Cancer Death Rates",
+                     xlab="Death Rate"))
+box()
+```
+  
+As we can see from the output, the default method for selecting the number of bins produced too few bins, which might obscure some interesting features in the data. A better result is achieved by setting the binning rule to the one proposed by Freedman and Diaconis. Fortunately, hist() function has a built-in option for this:   
+```{r}
+with(cancer.df, hist(deathRate,  breaks='FD', col = "gray", 
+                     main="Histogram of Cancer Death Rates",
+                     xlab="Death Rate"))
+box()
+```
+  
+Now we have a much higher level of detail and can easily infer that deathRate variable distribution is very close to the normal one, with a notable outliers on the far right of the histogram.  
+  
+Let's explore the extreme outliers with deathRate over 300 and see if we can find anything unusual in these observations.   
+To find out how many outliers are there, we'll use the nrow() function:   
+```{r}
+nrow(cancer.df[cancer.df$deathRate > 300,])
+```
+  
+Turns out there's only one observation with this property, so let's examine it a bit closer.    
+```{r}
+cancer.df[cancer.df$deathRate > 300,c(2:5,7,10,21:23,30)]
+```
+  
+At first sight, nothing in the rest of the data stands out to provide a possible explanation for the high mortality rate (363). We might want to revisit this observation once we completed the rest of the analysis.   
+  
+
+### Private Insurance Coverage (**PctPrivateCoverage** variable)
+  
+Similar to our target variable, we summarize PctPrivateCoverage and generate its histogram:    
+```{r PctPrivateCoverage}
+summary(cancer.df$PctPrivateCoverage)
+with(cancer.df, hist(PctPrivateCoverage, breaks="FD", col = "gray", 
+                     main="Histogram of Private Insurance Coverage",
+                     xlab="Percent Covered"))
+box()
+```
+   
+We notice that the frequency distribution has some negative skew, with the majority of values falling between 55% and 75%. The data looks reasonable, with no obvious errors and missing values.  
+   
+### Public Insurance Coverage (**PctPublicCoverage** variable)    
+   
+We repeat the steps executed above for the public insurance coverage:   
+  
+```{r PctPublicCoverage}
+summary(cancer.df$PctPublicCoverage)
+with(cancer.df, hist(PctPublicCoverage, breaks="FD", col = "gray", 
+                     main="Histogram of Public Insurance Coverage",
+                     xlab = "Percent Covered"))
+box()
+```
+  
+Compared to the private insurance coverage, the data is more evenly distributed and is much closer to the normal curve. The mean and median values are almost half of the ones for the private insurance coverage. From that we can infer that the private insurance is much more prevalent than the one sponsored by the state.  
+Similar to PctPrivateCoverage, the public coverage variables doesn't show any obvious errors and there are no missing values.  
+  
+### Employer-sponsored Portion of the Private Coverage (**EmpSponsoredPct** variable)  
+  
+After exploring the general category of the private coverage, we would like to examine what portion of the insurance are provided by employers:   
+  
+```{r EmpSponsoredPct}
+summary(cancer.df$EmpSponsoredPct)
+with(cancer.df, hist(EmpSponsoredPct, breaks="FD", col = "gray", 
+                     main="Histogram of Employer Portion of Private Coverage",
+                     xlab = "Percent Covered"))
+box()
+```
+  
+The histogram tells us that employment is the major source of private insurance coverage in the counties: most of the values of EmpSponsoredPct variable fall between 60% and 70%.  
+  
+  
+### No Insurance Coverage (**PctNoCoverage** variable)  
+  
+Let's summarize our generated variable that represents percentage of the population with no insurance coverage:   
+```{r PctNoCoverage}
+summary(cancer.df$PctNoCoverage)
+with(cancer.df, hist(PctNoCoverage, breaks="FD", col = "gray", 
+                     main="Histogram of No Insurance Coverage",
+                     xlab = "Percent Not Covered"))
+box()
+```
+  
+Unlike the distributions we've seen so far, this variable has a major peak around 0, with the rest of the values tapering off in the shape of the long-tailed distribution.   
+To get a better insight into the variable, we can generate the percentile metric:  
+  
+```{r}
+quantile(cancer.df$PctNoCoverage, prob = seq(0, 1, length = 11), type = 5)
+```
+  
+The result shows that 80% of the observations have less than 5% of the population with no health insurance. We can safely infer then that the effect of this variable on the target will be minimal.  
+  
+  
+### Coverage that includes both Private and Public Components (**PctDoubleCoverage** variable)  
+  
+We repeat the steps executed during the evaluation of PctNoCoverage variable:  
+```{r PctDoubleCoverage}
+summary(cancer.df$PctDoubleCoverage)
+with(cancer.df, hist(PctDoubleCoverage, breaks="FD", col = "gray", 
+                     main="Histogram of Double Coverage",
+                     xlab = "Percent Covered"))
+box()
+quantile(cancer.df$PctDoubleCoverage, prob = seq(0, 1, length = 11), type = 5)
+```
+  
+The result shows that 80% of the counties have less than 7% of the population with double health insurance.   Therefore, similar to the previous case, its relative effect on the target variable will be minimal.  
+  
+
+***  
+  
+# Analysis of Key Relationships  
+  
+### Mortality rates for different levels of Private Insurance Coverage  
+  
+Our first question is whether having access to a private insurance coverage is correlated with cancer mortality rates. A reasonable hypothesis would be that a cancer patient with a private insurance would be able to afford better treatment options. As a result, she or he will have better chances of survival, so we should expect negative correlation between deathRate and PctPrivateCoverage.  
+Let's build a scatterplot showing the relationship between these two variables.   
+In order to get a better insight into what linear relationship exists in the data, we add the ordinary least squares 
+regression line to the plot and calculate the correlation.  
+```{r deathRate_PctPrivateCoverage }
+plot(cancer.df$PctPrivateCoverage, cancer.df$deathRate, 
+     xlab = "Percent with Private Coverage", ylab = "Death Rate",col="gray",
+     main = "Death Rates for different levels of Private Insurance Coverage")
+abline(lm(cancer.df$deathRate ~ cancer.df$PctPrivateCoverage),col="red")
+cor(cancer.df$deathRate, cancer.df$PctPrivateCoverage)
+```
+  
+Both from the plot and from the correlation value (-0.39) we can see that they're in agreement with our original hypothesis that mortality rates are lower for the populations with higher percentage of private insurance coverage. 
+The relationship does appear to be linear from about 40% of coverage onward (this is where the majority of observations seem to fall). At the lower end of the graph, the spread of values is much higher.  
+Despite showing the overall trend, the scatterplot is quite noisy, so we might want to confirm our conclusion by generating boxplots for different categories of coverage.   
+First, we'll split the range of PctPrivateCoverage variables into three bins and label them as "low", "medium", and "high" brackets of private insurance coverage. We then will build three separate boxplots for these categories and see how they're distributed relative to deathRate.  
+```{r}
+levels(cut(cancer.df$PctPrivateCoverage, 3, include.lowest=TRUE))
+boxplot(deathRate ~ cut(PctPrivateCoverage, 3, include.lowest=TRUE, 
+        labels=c("low", "medium", "high")), 
+        data = cancer.df,
+        cex.axis = .7,
+        main = "Death Rate for different levels of Private Insurance Coverage",
+        xlab = "Private Insurance Coverage", ylab = "Death Rate")
+```
+  
+The boxplot shows a clear downward trend from the "medium" to "high" category, with the majority of values clustered around the median. The "low" category boxplot, on the other hand, has a much wider spread of data points. We might conclude, therefore, that the effect of private insurance on mortality rates is only noticeable for the percentage of coverage which is above certain threshold (~40%).  
+The "medium" category also includes the high death rate outlier we've identified earlier (>350). Therefore, the high mortality rate can't be explained by the inadequate private insurance coverage.  
+  
+__Summary of observations:__  
+  
+1. There's a mild negative correlation between cancer mortality rates and access to the private insurance coverage
+
+2. The effect of negative correlation becomes noticeable only after the coverage percentage reaches ~40%. Below this point, the data spread is much wider and the effect of private coverage is not obvious.
+  
+  
+### Mortality rates for different levels of Public Insurance Coverage
+  
+We now explore whether public insurance coverage has a similar effect on cancer mortality rates. We repeat the same steps of data analysis we've performed for the private insurance variable:  
+```{r deathRate_PctPublicCoverage}
+plot(cancer.df$PctPublicCoverage, cancer.df$deathRate,  
+     xlab = "Percent with Public Coverage", ylab = "Death Rate", col="gray",
+     main = "Death rates for different levels of Public Insurance Coverage")
+abline(lm(cancer.df$deathRate ~ cancer.df$PctPublicCoverage),col="red")
+
+cor(cancer.df$deathRate, cancer.df$PctPublicCoverage)
+```
+  
+```{r}
+levels(cut(cancer.df$PctPublicCoverage, 3, include.lowest=TRUE))
+boxplot(deathRate ~ cut(PctPublicCoverage, 3, include.lowest=TRUE, 
+        labels=c("low", "medium", "high")), 
+        data = cancer.df,
+        cex.axis = .7,
+        main = "Death Rate for different levels of Public Insurance Coverage",
+        xlab = "Public Insurance Coverage", ylab = "Death Rate")
+```
+   
+Contrary to our expectations, we see the directly opposite relationship between public insurance coverage and cancer mortality rates. The values are positively correlated and the correlation's absolute value is even higher than the one we calculated for private insurance coverage.  
+There's also no salient threshold effect we observed earlier: the relationship appears to be linear throughout the entire range of coverage percentage.  
+  
+__Summary of observations:__
+  
+1. There's a noticeable positive correlation between cancer mortality rates and availability of public insurance coverage   
+  
+2. The relationship is very close to the linear one throughout the entire range of coverage's percentages .  
+  
+
+### Relationship between Private and Public Insurance Coverage  
+   
+We will now explore if there is any meaningful relationship between private and public insurance coverage.
+As in the earlier steps of our investigation, we generate a scatterplot and box plots for these variables, and compute the correlation value:    
+   
+```{r PctPrivateCoverage_PctPublicCoverage}
+plot(cancer.df$PctPublicCoverage, cancer.df$PctPrivateCoverage, col="gray",
+     xlab = "Percent with Public Coverage", ylab = "Percent with Private Coverage", 
+     main = "Private Coverage for different levels of Public Insurance Coverage")
+abline(lm(cancer.df$PctPrivateCoverage ~ cancer.df$PctPublicCoverage),col="red")
+cor(cancer.df$PctPrivateCoverage, cancer.df$PctPublicCoverage)
+```
+  
+```{r}
+levels(cut(cancer.df$PctPublicCoverage, 3, include.lowest=TRUE))
+boxplot(PctPrivateCoverage ~ cut(PctPublicCoverage, 3, include.lowest=TRUE, 
+        labels=c("low", "medium", "high")), 
+        data = cancer.df,
+        cex.axis = .7,
+        main = "Private Coverage for different levels of Public Insurance Coverage",
+        xlab = "Public Insurance Coverage", ylab = "Percent with Private Coverage")
+```
+  
+__Summary of observations:__  
+  
+1. There's a strong negative correlation between private and public insurance coverage.   
+  
+2. The majority of observations cluster around ordinary least squares regression line, emphasizing linear relationship between the two variables.  
+   
+  
+
+### Mortality rates for different levels of Employer-sponsored Private Coverage
+  
+Finally, let's see if the relative portion of employer-sponsored private insurance coverage has any relationship 
+with cancer mortality rates.  
+```{r deathRate_EmpSponsoredPct}
+plot(cancer.df$EmpSponsoredPct, cancer.df$deathRate, col="gray", 
+     xlab = "Percentage of Private Coverage provided by Employers", 
+     ylab = "Death Rate", 
+     main = "Death Rates for different levels of Employer Coverage")
+abline(lm(cancer.df$deathRate ~ cancer.df$EmpSponsoredPct),col="red")
+cor(cancer.df$deathRate, cancer.df$EmpSponsoredPct)
+```
+  
+  
+__Summary of observations:__
+  
+1. From the data analysis above, we don't detect any noticeable relationships between the cancer mortality rates and the composition of the private insurance coverage.  
+  
+  
+ 
+***   
+ 
+# Analysis of Secondary Effects  
+  
+While we do see correlation between cancer mortality rate and percent of insurance coverage, the positive correlation for public insurance coverage rates vs. mortality rate seems counter intuitive. We would expect higher coverage rates to improve outcomes (i.e. drive down mortality rates). Moreover, the more intuitive correlation (Higher private insurance coverage relates to lower mortality rates) is the weaker of the two.  
+
+Given the above, we will to look at what else might be at play. Given the increased recognition of social determinant of health as playing an important factor in individual health outcomes, we will focus in on socioeconomic factors using the Median income and Poverty Percent variables as a proxy.  
+
+We will also evaluate how incident rate (which we assume is the number of people diagnosed with cancer annually) relates to mortality rate.  
+
+
+### Mortality Rates vs. Median Income
+
+ 
+```{r boxplot+++}
+#Dataset binning
+boxplot(deathRate ~ binnedInc, data = cancer.df,
+        cex.axis = .7,
+        main = "Death Rate for different levels of Income",
+        xlab = "Income Category", ylab = "Death Rate")
+```
+
+
+We see that there is a distinct downward trend when looking at death rates with increasing median income. This may lead us to the hypothesis that actually socioeconomic factors have more to do with death rates than the percent coverage by type of health insurance itself.   
+
+Taking a deeper look into another socioeconomic variable might strengthen our hypothesis.  
+
+ 
+### Mortality Rates vs. Poverty Percent
+  
+```{r boxplot vi}
+cor(cancer.df$povertyPercent,cancer.df$deathRate)
+boxplot(cancer.df$deathRate ~ cut(cancer.df$povertyPercent, right=FALSE,seq(0,50,10),
+        labels = c("0% - 10%","10% - 20%","20% - 30%","30% - 40%", "40% - 50%")),
+        main = "Cancer Mortality Rates for different levels of Poverty",
+        xlab = "% Population below Poverty Line", ylab = "Cancer Death Rates")
+```
+  
+This  seems to confirm what we have seen analyzing the median income vs the death rates. Higher income / Lower poverty counties tend to have lower death rates. 
+  
+Given the strong positive correlation between poverty levels and mortality rate, we should explore the relationship between poverty rates and insurance coverage.
+  
+
+### Poverty Percent vs. Private & Public Insurance Coverage
+  
+**Private Insurance Coverage**
+  
+The strongest relation we have encountered so far, we see that populations with higher percentage below poverty line tend to have less private health insurance coverage, the opposite behavior to the median income variable. Taking a look into boxplots provides us with a indicative of validity of such hypothesis:  
+  
+```{r boxplot++++}
+cor(cancer.df$povertyPercent,cancer.df$PctPrivateCoverage)
+boxplot(cancer.df$PctPrivateCoverage ~ cut(cancer.df$povertyPercent,
+        right=FALSE,seq(0,50,10),
+        labels = c("0% - 10%","10% - 20%","20% - 30%","30% - 40%", "40% - 50%")),
+        main = "Private Coverage for different levels of Poverty Percent",
+        xlab = "% Population below Poverty Line", ylab = "Private Coverage")
+```
+  
+  
+**Public Insurance Coverage**  
+As expected by our previous analysis, the higher the poverty, more people rely on public health insurance:  
+    
+```{r boxplot+++++}
+cor(cancer.df$povertyPercent,cancer.df$PctPublicCoverage)
+boxplot(cancer.df$PctPublicCoverage ~ cut(cancer.df$povertyPercent, right=FALSE,seq(0,50,10),
+        labels = c("0% - 10%","10% - 20%","20% - 30%","30% - 40%", "40% - 50%")),
+        main = "Public Coverage for different levels of Poverty Percent",
+        xlab = "% Population below Poverty Line", ylab = "Public Coverage")
+```
+  
+  
+### Incident Rate vs. Mortality Rate
+  
+As a last stop in our journey of exploration, we look at cancer incident rates in relation to cancer mortality rates.
+    
+  
+```{r boxplot}
+
+levels(cut(log(cancer.df$avgAnnCount), 7, include.lowest=TRUE))
+boxplot(deathRate ~ cut(log(avgAnnCount), 7, include.lowest=TRUE), 
+        data = cancer.df,
+        cex.axis = .7,
+        main = "Death Rate for different levels of Incidence Rate",
+        xlab = "log(avgAnnCount)", ylab = "Death Rate")
+```
+   
+  
+Curiously enough, it seems as though the incidence rate has a positive correlation with the death rate up to a certain point. Once past that threshold (4.29, 5.54], the correlation becomes negative. One possible interpretation is that after a certain number of cancer reported cases, there is a more pressing need to invest in that disease, increasing the survival chances for those with it and, consequently, decreasing the death rates.
+ 
+   
+*********   
+  
+  
+# Conclusions
+  
+**Our main conclusion is that access to insurance by itself is not a fundamental driver of improving cancer mortality rates. Socioeconomic conditions (as measured by poverty rate) seem to have a much larger and direct impact. ** 
+  
+The initial data analysis we performed did not conclusively support our hypothesis that cancer patients who have access to health insurance have better chances of survival. It showed weak corroborating evidence in the case of private insurance , and stronger evidence to the contrary for public insurance.  
+One of the important findings is that higher levels of public insurance coverage are strongly correlated with lower percentage of private insurance coverage. The relative amount of private coverage sponsored by employers have no detectable relationships with cancer mortality rates.  
+  
+In order to explain these counter-intuitive results, as well as the 'threshold effect' of private coverage, we decided to explore other variables that might directly influence these relationships, turning our attention to socioeconomic factors, specifically poverty rate and median income.  
+  
+What we found was revealing:  
+1. Higher income populations tend to have lower cancer death rates, and with more money, more access to private health insurance.  
+2. Populations with higher percentage of poverty tend to have higher cancer death rates, and poverty conditions limit the access to private health insurance coverage, being more dependent on the public alternative.  
+  
+Therefore, there is stronger evidence that socioeconomic factors (income, poverty) are bigger contributors in explaining the cancer death rates than health insurance per se. Since type of health insurance coverage (public or private) is also probably affected by these factors, it explains their opposite behaviors as far as correlation with  death rate goes.
+  
+Finally, we did see an interesting, and at first counter intuitive trend in the data: Incident rate and mortality rate are strongly positively correlated up to a certain point. Beyond that point, the correlation is negative, perhaps suggesting that in counties with high incident rates, more resources as being brought to bear, thus throttling mortality rates?  
+  
+This of course, is good fodder for a future exploratory data analysis.
+  
